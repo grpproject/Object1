@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced AI Object Recognition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-white">
+
+    <main class="mx-auto max-w-7xl px-5 py-12">
+
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold tracking-tight">
+                AI Object Intelligence
+            </h1>
+
+            <p class="mt-3 text-slate-400">
+                Extract, store and recognize objects using AI.
+            </p>
+        </header>
+
+        <div class="grid gap-8 lg:grid-cols-2">
+
+            <!-- Training Module -->
+
+            <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+
+                <div class="mb-6">
+                    <span class="text-sm font-semibold text-blue-400">
+                        MODULE 01
+                    </span>
+
+                    <h2 class="mt-2 text-2xl font-bold">
+                        Object Database
+                    </h2>
+
+                    <p class="mt-2 text-sm text-slate-400">
+                        Upload reference images and save extracted objects.
+                    </p>
+                </div>
+
+                <input
+                    id="trainingInput"
+                    type="file"
+                    accept="image/*"
+                    class="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm"
+                >
+
+                <img
+                    id="trainingPreview"
+                    class="mt-5 hidden max-h-72 w-full rounded-xl object-contain"
+                    alt="Training preview"
+                >
+
+                <button
+                    id="trainingButton"
+                    class="mt-6 w-full rounded-xl bg-blue-600 px-5 py-4 font-semibold transition hover:bg-blue-700 disabled:opacity-50"
+                >
+                    Extract & Save Objects
+                </button>
+
+                <p id="trainingMessage" class="mt-4 text-sm text-slate-400"></p>
+
+                <div id="trainingResults" class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3"></div>
+
+            </section>
+
+            <!-- Prediction Module -->
+
+            <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+
+                <div class="mb-6">
+                    <span class="text-sm font-semibold text-green-400">
+                        MODULE 02
+                    </span>
+
+                    <h2 class="mt-2 text-2xl font-bold">
+                        AI Prediction
+                    </h2>
+
+                    <p class="mt-2 text-sm text-slate-400">
+                        Upload a new image and recognize its objects.
+                    </p>
+                </div>
+
+                <input
+                    id="predictionInput"
+                    type="file"
+                    accept="image/*"
+                    class="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm"
+                >
+
+                <img
+                    id="predictionPreview"
+                    class="mt-5 hidden max-h-72 w-full rounded-xl object-contain"
+                    alt="Prediction preview"
+                >
+
+                <button
+                    id="predictionButton"
+                    class="mt-6 w-full rounded-xl bg-green-600 px-5 py-4 font-semibold transition hover:bg-green-700 disabled:opacity-50"
+                >
+                    Detect & Recognize Objects
+                </button>
+
+                <p id="predictionMessage" class="mt-4 text-sm text-slate-400"></p>
+
+                <div id="predictionResults" class="mt-6 grid grid-cols-1 gap-4"></div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <script>
+        const trainingInput = document.getElementById("trainingInput");
+        const trainingPreview = document.getElementById("trainingPreview");
+        const trainingButton = document.getElementById("trainingButton");
+        const trainingMessage = document.getElementById("trainingMessage");
+        const trainingResults = document.getElementById("trainingResults");
+
+        const predictionInput = document.getElementById("predictionInput");
+        const predictionPreview = document.getElementById("predictionPreview");
+        const predictionButton = document.getElementById("predictionButton");
+        const predictionMessage = document.getElementById("predictionMessage");
+        const predictionResults = document.getElementById("predictionResults");
+
+        function setupPreview(input, preview) {
+            input.addEventListener("change", () => {
+                const file = input.files[0];
+
+                if (!file) return;
+
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove("hidden");
+            });
+        }
+
+        setupPreview(trainingInput, trainingPreview);
+        setupPreview(predictionInput, predictionPreview);
+
+        function createElement(tag, className, text = "") {
+            const element = document.createElement(tag);
+            element.className = className;
+            element.textContent = text;
+            return element;
+        }
+
+        function createObjectCard(object, index, isPrediction = false) {
+            const card = createElement(
+                "div",
+                "overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-3"
+            );
+
+            const image = document.createElement("img");
+            image.src = object.image_url;
+            image.alt = object.name;
+            image.className = "h-36 w-full rounded-lg bg-white object-contain";
+
+            const name = createElement(
+                "h3",
+                "mt-3 font-semibold capitalize",
+                object.name
+            );
+
+            const number = createElement(
+                "p",
+                "mt-1 text-xs text-slate-500",
+                `Object #${index + 1}`
+            );
+
+            card.appendChild(image);
+            card.appendChild(name);
+            card.appendChild(number);
+
+            if (isPrediction) {
+                const confidence = createElement(
+                    "p",
+                    "mt-2 text-sm text-blue-400",
+                    `Category confidence: ${object.category_confidence}%`
+                );
+
+                const match = object.same_object;
+
+                const matchStatus = createElement(
+                    "p",
+                    "mt-2 text-sm " + (match.matched ? "text-green-400" : "text-amber-400"),
+                    match.matched
+                        ? "Possible same object found"
+                        : "No reliable same-object match"
+                );
+
+                card.appendChild(confidence);
+                card.appendChild(matchStatus);
+
+                if (match.similarity !== undefined) {
+                    card.appendChild(createElement(
+                        "p",
+                        "mt-1 text-xs text-slate-400",
+                        `Visual similarity: ${match.similarity}%`
+                    ));
+                }
+
+                if (match.object_id) {
+                    card.appendChild(createElement(
+                        "p",
+                        "mt-1 break-all text-xs text-slate-500",
+                        `Matched ID: ${match.object_id}`
+                    ));
+                }
+            } else {
+                card.appendChild(createElement(
+                    "p",
+                    "mt-2 text-sm text-green-400",
+                    `Detection: ${object.confidence}%`
+                ));
+
+                card.appendChild(createElement(
+                    "p",
+                    "mt-1 break-all text-xs text-slate-500",
+                    `ID: ${object.object_id}`
+                ));
+            }
+
+            return card;
+        }
+
+        async function processImage({
+            input,
+            button,
+            message,
+            endpoint,
+            resultsContainer,
+            isPrediction
+        }) {
+            const file = input.files[0];
+
+            if (!file) {
+                message.textContent = "Please select an image first.";
+                message.className = "mt-4 text-sm text-red-400";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("image", file);
+
+            button.disabled = true;
+            button.textContent = "AI Processing...";
+            message.textContent = "Please wait. Processing image...";
+            message.className = "mt-4 text-sm text-blue-400";
+
+            resultsContainer.replaceChildren();
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || "Processing failed.");
+                }
+
+                const objects = isPrediction
+                    ? result.predictions
+                    : result.objects;
+
+                message.textContent =
+                    `Successfully processed ${result.total_objects} objects.`;
+
+                message.className = "mt-4 text-sm text-green-400";
+
+                objects.forEach((object, index) => {
+                    resultsContainer.appendChild(
+                        createObjectCard(object, index, isPrediction)
+                    );
+                });
+
+                if (objects.length === 0) {
+                    message.textContent = "No objects detected. Try another image.";
+                }
+
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "mt-4 text-sm text-red-400";
+            } finally {
+                button.disabled = false;
+
+                button.textContent = isPrediction
+                    ? "Detect & Recognize Objects"
+                    : "Extract & Save Objects";
+            }
+        }
+
+        trainingButton.addEventListener("click", () => {
+            processImage({
+                input: trainingInput,
+                button: trainingButton,
+                message: trainingMessage,
+                endpoint: "/api/extract",
+                resultsContainer: trainingResults,
+                isPrediction: false
+            });
+        });
+
+        predictionButton.addEventListener("click", () => {
+            processImage({
+                input: predictionInput,
+                button: predictionButton,
+                message: predictionMessage,
+                endpoint: "/api/predict",
+                resultsContainer: predictionResults,
+                isPrediction: true
+            });
+        });
+    </script>
+
+</body>
+</html>
